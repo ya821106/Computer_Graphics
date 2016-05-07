@@ -1,4 +1,4 @@
-
+<!DOCTYPE html>
 <html>
 <head>
 	<title>計算機圖學</title>
@@ -19,10 +19,10 @@
 	jQuery(document).ready(function($) {
 		$("#hwNumber").val(4);
 		hwNumber = $("#hwNumber").val();
-		JsFiddle=["https://jsfiddle.net/Zong/oaz2jmqL/1/show", "https://jsfiddle.net/Zong/v63jrnne/35/show", "https://jsfiddle.net/Zong/v63jrnne/42/show"];
+		JsFiddle=["https://jsfiddle.net/Zong/oaz2jmqL/1/show", "https://jsfiddle.net/Zong/v63jrnne/42/show", "",""];
 		buildTotalHW();
 		buildButton();
-
+		/*
 		$( "div" ).click(function() {
 			//console.log($( this  ).find("iframe").attr("id"));
 			//console.log($(this).find("iframe").contents().find("div[id=moveFocuseOuter]").attr("id"));
@@ -30,7 +30,7 @@
 			//document.getElementById('moveFocuseOuter').focus();
 			return false;
 		});
-
+		*/
 
 	});
 	/*
@@ -66,7 +66,7 @@
 			jQuery('<iframe/>', {
 			    id: 'HW'+i,
 			    src: 'HW'+i,
-			    style: 'width:50%; height:50%;',
+			    style: 'width:50%; height:99%;',
 			    sandbox: 'allow-forms allow-popups allow-scripts allow-same-origin allow-modals',
 			    frameborder: '0'
 			}).appendTo('#DIV_HW'+i);
@@ -111,7 +111,7 @@
 	var show = function(i){
 		$("#DIV_HW"+i).show();
 		$($("#DIV_HW"+i).find("iframe")).width("99%");
-		$($("#DIV_HW"+i).find("iframe")).height("99%");
+		$($("#DIV_HW"+i).find("iframe")).height("600");
 		hiddeShow(i);
 		hiddeJsFiddle(0);
 	}
@@ -186,12 +186,6 @@
             <ul class="dropdown-menu">
             	<li><a href="#" onclick="showTotal()">Show</a></li>
                 <li><a href="#" onclick="showTotalJsFiddle()">JSFIDDLE</a></li>
-                <!--
-                <li><a href="#">Another action</a></li>
-                <li><a href="#">Something else here</a></li>
-                <li class="divider"></li>
-                <li><a href="#">Separated link</a></li>
-                -->
             </ul>
         </div>        
     </div>
