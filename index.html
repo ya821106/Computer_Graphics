@@ -1,0 +1,205 @@
+
+<html>
+<head>
+	<title>計算機圖學</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+	<!-- Latest compiled and minified CSS -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" integrity="sha384-1q8mTJOASx8j1Au+a5WDVnPi2lkFfwwEAa8hDDdjZlpLegxhjVME1fgjWPGmkzs7" crossorigin="anonymous">
+
+	<!-- Optional theme -->
+	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap-theme.min.css" integrity="sha384-fLW2N01lMqjakBkx3l/M9EahuwpSfeNvV63J5ezn3uZzapT0u7EYsXMjQV+0En5r" crossorigin="anonymous">
+
+	<!-- Latest compiled and minified JavaScript -->
+	<script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/js/bootstrap.min.js" integrity="sha384-0mSbJDEHialfmuBBQP6A4Qrprq5OVfW37PRR3j5ELqxss1yVqOtnepnHVP9aJ7xS" crossorigin="anonymous"></script>
+	<script>
+	jQuery(document).ready(function($) {
+		$("#hwNumber").val(4);
+		hwNumber = $("#hwNumber").val();
+		JsFiddle=["https://jsfiddle.net/Zong/oaz2jmqL/1/show", "https://jsfiddle.net/Zong/v63jrnne/35/show", "https://jsfiddle.net/Zong/v63jrnne/42/show"];
+		buildTotalHW();
+		buildButton();
+
+		$( "div" ).click(function() {
+			//console.log($( this  ).find("iframe").attr("id"));
+			//console.log($(this).find("iframe").contents().find("div[id=moveFocuseOuter]").attr("id"));
+			$(this).find("iframe").contents().find("div[id=moveFocuseOuter]").focus();
+			//document.getElementById('moveFocuseOuter').focus();
+			return false;
+		});
+
+
+	});
+	/*
+	$( "iframe" ).each(function( i ) {
+		if(i==3)
+	    	return false;
+	    $(this).contents().find("canvas").click(function() {
+				alert($(this).parents().attr("id"));
+				return false;
+			});
+
+	  });
+	*/
+	var buildButton = function(){
+		var btnWay = ["primary" ,"danger" ,"warning" ,"success" ,"info"];
+		for(var i =1;i<=hwNumber;i++){
+			jQuery('<div class="btn-group">\
+			            <button class="btn btn btn-'+btnWay[i%5]+' dropdown-toggle" data-toggle="dropdown">HW' +i+ '<span class="caret"></span></button>\
+			            <ul class="dropdown-menu">\
+			            	<li><a href="#" onclick="show('+i+')">Show</a></li>\
+			            	<li><a href="#" onclick="showJsFiddle('+i+')">JSFIDDLE</a></li>\
+			            </ul>\
+			        </div>').appendTo('#btn-toolbar1');
+		}		
+	}
+	var buildTotalHW = function(){
+		for(var i =1;i<=hwNumber;i++){
+			jQuery('<div/>', {
+			    id: 'DIV_HW'+i
+			}).appendTo('#showTotal');
+
+			jQuery("<br /><label>"+'&nbsp;&nbsp;HW'+i+"</label><br />").appendTo('#DIV_HW'+i);
+			jQuery('<iframe/>', {
+			    id: 'HW'+i,
+			    src: 'HW'+i,
+			    style: 'width:50%; height:50%;',
+			    sandbox: 'allow-forms allow-popups allow-scripts allow-same-origin allow-modals',
+			    frameborder: '0'
+			}).appendTo('#DIV_HW'+i);
+
+			jQuery("<br />").appendTo('#DIV_HW'+i);
+
+			$($("#DIV_HW"+i).find("iframe")).width("30%");
+			W = $($("#DIV_HW"+i).find("iframe")).width();
+			$($("#DIV_HW"+i).find("iframe")).height(W);
+		}
+		
+		
+
+		for(var i =1;i<=hwNumber;i++){
+			jQuery('<div/>', {
+			    id: 'JsFiddle_HW'+i
+			}).appendTo('#showTotal');
+
+			jQuery("<br /><label>"+'&nbsp;&nbsp;HW'+i+"</label><br />").appendTo('#JsFiddle_HW'+i);
+			jQuery('<iframe/>', {
+			    id: 'JsFiddle_HW'+i,
+			    src: JsFiddle[i-1],
+			    style: 'width:50%; height:50%;',
+			    sandbox: 'allow-forms allow-popups allow-scripts allow-same-origin allow-modals',
+			    frameborder: '0'
+			}).appendTo('#JsFiddle_HW'+i);
+
+			jQuery("<br />").appendTo('#JsFiddle_HW'+i);
+		}
+		hiddeJsFiddle(0);
+
+	}
+	var showTotal = function(){
+		for(var i =1;i<=hwNumber;i++){
+			$("#DIV_HW"+i).show();
+			$($("#DIV_HW"+i).find("iframe")).width("30%");
+			var W = $($("#DIV_HW"+i).find("iframe")).width();
+			$($("#DIV_HW"+i).find("iframe")).height(W);
+		}
+		hiddeJsFiddle(0);
+	}
+	var show = function(i){
+		$("#DIV_HW"+i).show();
+		$($("#DIV_HW"+i).find("iframe")).width("99%");
+		$($("#DIV_HW"+i).find("iframe")).height("99%");
+		hiddeShow(i);
+		hiddeJsFiddle(0);
+	}
+	var hiddeShow = function(a){
+		for(var i =1;i<=hwNumber;i++){
+			if(i!=a){
+				$("#DIV_HW"+i).hide();
+			}
+		}
+	}
+
+	var showTotalJsFiddle = function(){
+		for(var i =1;i<=hwNumber;i++){
+			$("#JsFiddle_HW"+i).show();
+			$($("#JsFiddle_HW"+i).find("iframe")).width("30%");
+			var W = $($("#JsFiddle_HW"+i).find("iframe")).width();
+			$($("#JsFiddle_HW"+i).find("iframe")).height(W);
+		}
+		hiddeShow(0);
+	}
+	var showJsFiddle = function(i){
+		$("#JsFiddle_HW"+i).show();
+		$($("#JsFiddle_HW"+i).find("iframe")).width("99%");
+		$($("#JsFiddle_HW"+i).find("iframe")).height("99%");
+		hiddeShow(0);
+		hiddeJsFiddle(i);
+	}
+	var hiddeJsFiddle = function(a){
+		for(var i =1;i<=hwNumber;i++){
+			if(i!=a){
+				$("#JsFiddle_HW"+i).hide();
+			}
+		}
+	}
+	
+
+	var Submit=function(){
+		/*
+		$.get("HW1.html",function(data){ //初始將a.html include div#iframe
+			console.log(data);
+			$("#info").html(data);
+		});*/ 
+/*
+	var URLs="HW1.html";
+   
+	$.ajax({
+		url: URLs,
+		data: null,
+		type:"GET",
+		dataType:'html',
+
+		success: function(msg){
+			//$("#info").append(msg);
+			console.log(msg);
+		},
+		 error:function(xhr, ajaxOptions, thrownError){ 
+			alert(xhr.status); 
+			alert(thrownError); 
+		 }
+	});
+*/
+}
+	</script>	
+
+</head>
+
+<body>
+	<br/>
+	<div id="btn-toolbar1" class="btn-toolbar" style="margin: 0;">
+        <div class="btn-group">
+            <button class="btn dropdown-toggle" data-toggle="dropdown">Total <span class="caret"></span></button>
+            <ul class="dropdown-menu">
+            	<li><a href="#" onclick="showTotal()">Show</a></li>
+                <li><a href="#" onclick="showTotalJsFiddle()">JSFIDDLE</a></li>
+                <!--
+                <li><a href="#">Another action</a></li>
+                <li><a href="#">Something else here</a></li>
+                <li class="divider"></li>
+                <li><a href="#">Separated link</a></li>
+                -->
+            </ul>
+        </div>        
+    </div>
+    <hr>
+
+
+	<div id="showTotal"></div>
+	
+	<input type="hidden" id="hwNumber" value="0">
+</body>
+</html>

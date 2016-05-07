@@ -1,0 +1,503 @@
+
+<html>
+<head>
+	<title>計算機圖學 HW1</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<!--
+<script src="//cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
+	-->
+
+	<!--
+	<link href="jpicker-1.1.6/jPicker.css" rel="stylesheet" type="text/css">
+	<link href="jpicker-1.1.6/css/jPicker-1.1.6.css" rel="stylesheet" type="text/css">
+	<link href="jpicker-1.1.6/css/jPicker-1.1.6.min.css" rel="stylesheet" type="text/css">
+	<script src="jpicker-1.1.6/jpicker-1.1.6.js"></script>
+	<script src="jpicker-1.1.6/jpicker-1.1.6.min.js"></script>
+	<script src="jpicker-1.1.6/jquery-1.4.4.min.js"></script>
+	-->
+	<!--
+	<script type='text/javascript' src='v0.4e\dat-gui\build\DAT.GUI.min.js'></script>-->
+	<script src="//cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"></script>
+	
+
+
+
+	<style type="text/css">
+		#info {
+			position: absolute;
+			top: 2%;
+			width: 100%;
+			padding: 10px;
+			text-align: center;
+			color: #ffff00
+		}
+
+		body {
+			overflow: hidden;
+		}
+		#showTime {
+			color: red;
+			margin: 5px;
+			cursor: pointer;
+		}
+		#showTime:hover {
+			background: yellow;	
+		}
+		#inset {
+			position:relative;
+			width: 200px;
+			height: 200px;
+			background-color: #fff; /* or transparent; will show through only if renderer alpha: true */
+			border: 1px solid black; /* or none; */
+			position: absolute;
+			right: 0px;
+			bottom: 0px;
+			z-index: 100;
+		}
+		#colorControl {
+			position:relative;
+			width: 200px;
+			height: 200px;
+			background-color: #fff; /* or transparent; will show through only if renderer alpha: true */
+			border: 1px solid black; /* or none; */
+			position: absolute;
+			left: 0px;
+			bottom: 0px;
+			z-index: 100;
+		}
+	</style>
+	<script >
+		var scene, renderer, camera;
+		var scene2, renderer2, camera2;
+		var controls;
+		var mesh, secAngle = 0, minAngle = 0, hrAngle = 0,	turn = false;
+		var width = window.innerWidth, height = window.innerHeight;
+		var org_width = window.innerWidth, org_height = window.innerHeight;
+		CANVAS_WIDTH = 200,
+		CANVAS_HEIGHT = 200,
+		CAM_DISTANCE = 300;
+		var secPointWay="Analog";
+		var MN_Material = new THREE.MeshNormalMaterial();
+		//var secAngle = Math.PI;
+		//var setCylinderAngle = new THREE.CylinderGeometry(  (width<height) ? width/8/4*3 : height/8/4*3,  (width<height) ? width/8/4 : height/8/4, 1, 64 ,64 , false, Math.PI,  secAngle);
+
+		var secColor=0xff0000;
+
+		var FizzyText = function() {
+		  this.message = 'dat.gui';
+		  this.speed = 0.8;
+		  //this.color = 0x000000;
+		  this.displayOutline = false;
+
+		  //this.color0 = "#ffae23"; // CSS string
+		  this.secPointColor = "#ffae23";
+		  this.minPointColor = "#a314ac";
+		  this.hrPointColor = "#81d91d";
+		  this.BK_PointColor = "#ffffbb";
+			
+		  //sec.material.color = new THREE.Color( this.color0);
+		  
+		  //this.color1 = [ 0, 128, 255 ]; // RGB array
+		  //this.color2 = [ 0, 128, 255, 0.3 ]; // RGB with alpha
+		  //this.color3 = { h: 350, s: 0.9, v: 0.3 }; // Hue, saturation, value
+
+		  this.explode = function() {};
+		  // Define render logic ...
+		  //secColor=this.color;
+		};
+		
+		var text = new FizzyText();
+		window.onload = function() {
+			
+			var gui = new dat.GUI();
+			
+			//gui.add(text, 'message', [ 'pizza', 'chrome', 'hooray' ] );
+			//gui.add(text, 'speed', -5, 5);
+			//gui.add(text, 'displayOutline');
+			//gui.add(text, 'explode');
+			//gui.add(text, 'speed', { Stopped: 0, Slow: 0.1, Fast: 5 } );
+
+			gui.addColor(text, 'BK_PointColor');
+			gui.addColor(text, 'secPointColor');
+			gui.addColor(text, 'minPointColor');
+			gui.addColor(text, 'hrPointColor');
+			//gui.addColor(text, 'color1');
+			//gui.addColor(text, 'color2');
+			//gui.addColor(text, 'color3');
+
+		};
+
+
+		jQuery(document).ready(function($) {
+			//$('#Binded').jPicker();
+			
+			$( "p" ).click(function() {
+				$( this ).slideUp();
+			});
+
+			$("#toggle").click(function() {
+				turn = !turn;
+				if($("#toggle").html()=="Toggle Turn"){
+					$("#toggle").html('Toggle Stop');
+				}
+				else{
+					$("#toggle").html('Toggle Turn');
+				}
+			});
+
+			$("#secPointWay").click(function() {
+
+				if($("#secPointWay").html()=="Analog"){
+					$("#secPointWay").html('Quartz');
+					secPointWay='Quartz';
+					$("#nowWay").html("Analog");
+				}
+				else
+				if($("#secPointWay").html()=="Quartz"){
+					$("#secPointWay").html('Sector');
+					secPointWay='Sector';
+					$("#nowWay").html("Quartz");
+				}
+				else
+				if($("#secPointWay").html()=="Sector"){
+					$("#secPointWay").html('Analog');
+					secPointWay='Analog';
+					$("#nowWay").html("Sector");
+				} 
+			});
+		});
+		
+		var drewClock = function(){
+			width = window.innerWidth; height = window.innerHeight;
+			//外罩
+			var outMaskGeometry = new THREE.SphereGeometry( (width<height) ? width/8 : height/8, 32, 5, 3, 6.3, 0, Math.PI/2);
+			var outMaskmaterial = new THREE.MeshBasicMaterial( {color: 0x91f8ff,transparent: true,	opacity:0.5
+			} );
+			sphere = new THREE.Mesh( outMaskGeometry, outMaskmaterial );
+			sphere.rotation.x = Math.PI/2;
+			sphere.position.y = -20;
+			//sphere.material.opacity=0.3;
+			scene.add( sphere );
+			
+			//外框
+			var BK_Side_Geometry = new THREE.TorusGeometry( (width<height) ? width/8 : height/8, 2 ,30 ,64);
+			//var BK_Side_material = new THREE.MeshNormalMaterial();
+			BK_Side = new THREE.Mesh(BK_Side_Geometry, MN_Material);
+			BK_Side.position.y = -20;
+			scene.add(BK_Side);
+
+			//背景
+			var gridXZ = new THREE.RingGeometry( 0, (width<height) ? width/8 : height/8, 32 );
+			var BK_material = new THREE.MeshBasicMaterial({
+				wireframe: false,
+				//color: 0xFFFFFF
+				color: 0xFFFFBB
+			});
+			BK = new THREE.Mesh(gridXZ, BK_material);
+			BK.position.y = -20;
+			scene.add(BK);
+
+			//秒針
+			
+			var sec_geometry = new THREE.BoxGeometry(2, ((width<height) ? width/8 : height/8) -10, 2);
+			var sec_material = new THREE.MeshBasicMaterial({
+				wireframe: false,
+				color: secColor
+			});
+
+			sec = new THREE.Mesh(sec_geometry, sec_material);
+
+			sec.rotation.x = Math.PI/2;
+			//sec.position.z = -45;
+			sec.position.z = ((width<height) ? width/8 : height/8)/2*-1;
+
+			var box = new THREE.Box3();
+			secCenter = new THREE.Group();
+			secCenter.rotation.x = Math.PI/2;
+			secCenter.position.y = -20;
+			secCenter.add( sec );
+			scene.add( secCenter );
+
+			//尖端
+			var secPoint_geometry = new THREE.CylinderGeometry( 3, 0, 10, 32 );
+
+			secPoint = new THREE.Mesh(secPoint_geometry, sec_material);
+			secPoint.rotation.x = Math.PI/2;
+			secPoint.position.z = ((width<height) ? width/8 : height/8) -5;
+			secPoint.position.z*=-1;
+			secCenter.add( secPoint );
+			//////////
+
+			//分針
+			var min_geometry = new THREE.CylinderGeometry(5 , 0, ((width<height) ? width/8 : height/8) -10, 10);
+			var min_material = new THREE.MeshBasicMaterial({
+				wireframe: false,
+				color: 0x000000
+				//color: 0x642100
+			});
+
+			min = new THREE.Mesh(min_geometry, min_material);
+			min.rotation.x = Math.PI/2;
+			//min.position.z = -40;
+			min.position.z = ((width<height) ? width/8 : height/8)/2-5;
+			min.position.z*=-1;
+
+			var box = new THREE.Box3();
+			minCenter = new THREE.Group();
+			minCenter.rotation.x = Math.PI/2;
+			minCenter.position.y = -20;
+			minCenter.add( min );
+			scene.add( minCenter );
+
+
+			//時針
+			var hr_geometry = new THREE.CylinderGeometry(5 , 0, ((width<height) ? width/8 : height/8) -30, 10);
+			var hr_material = new THREE.MeshBasicMaterial({
+				wireframe: false,
+				color: 0x000000
+				//color: 0x642100
+			});
+
+			hr = new THREE.Mesh(hr_geometry, hr_material);
+			hr.rotation.x = Math.PI/2;
+			//hr.position.z = -30;
+			hr.position.z = ((width<height) ? width/8 : height/8)/2-15;
+			hr.position.z*=-1;
+
+
+			var box = new THREE.Box3();
+			hrCenter = new THREE.Group();
+			hrCenter.rotation.x = Math.PI/2;
+			hrCenter.position.y = -20;
+			hrCenter.add( hr );
+			scene.add( hrCenter );
+
+			///////center
+			var center_geometry = new THREE.RingGeometry( 0, 5, 32 );
+			var center_material = new THREE.MeshBasicMaterial({
+				wireframe: false,
+				color: 0xFFFF33
+			});
+
+			center = new THREE.Mesh(center_geometry, center_material);
+
+			center.position.y = -20;
+			center.position.z = 5;
+
+			scene.add( center );
+			/////////
+
+			
+		}
+		var drewCoordinateAxis = function(){
+			// scene
+			scene2 = new THREE.Scene();
+			// renderer
+			renderer2 = new THREE.WebGLRenderer();
+			renderer2.setSize( CANVAS_WIDTH, CANVAS_HEIGHT );
+			renderer2.setClearColor( 0xf0f0f0, 1 );
+			//$('body').append(renderer2.domElement);
+			//$('#inset').append(renderer2.domElement);
+			//document.getElementById('inset').appendChild(renderer2.domElement);
+			$(function(){
+				$('#inset').append(renderer2.domElement);
+			});
+			
+
+			// camera
+			camera2 = new THREE.PerspectiveCamera( 50, CANVAS_WIDTH / CANVAS_HEIGHT, 1, 1000 );
+			camera2.up = camera.up; // important!
+			// axes
+			axes2 = new THREE.AxisHelper( 100 );
+			scene2.add( axes2 );
+			axes2.scale.x = axes2.scale.y = axes2.scale.z = 1.3;
+		}
+		function init() {
+			circlea="undefined";
+			scene = new THREE.Scene();
+			renderer = new THREE.WebGLRenderer();
+			width = window.innerWidth; height = window.innerHeight;
+			renderer.setSize( width, height);
+			renderer.setClearColor(0x888888);
+			//document.body.appendChild(renderer.domElement);
+			$(function(){
+				$('body').append(renderer.domElement);
+			});
+			camera = new THREE.PerspectiveCamera(50, width / height, 1, 10000);
+			camera.position.z = 300;
+
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+			drewClock();
+			drewCoordinateAxis();
+
+			window.addEventListener('resize', onWindowResize, false);
+		}
+
+		function onWindowResize() {
+			//width2=width;height2=height;
+			//console.log(window.innerWidth+"  "+"  "+width+"  "+width)
+			width = window.innerWidth ; height = window.innerHeight;
+			camera.aspect = width / height;
+			camera.updateProjectionMatrix();
+			renderer.setSize(width, height);
+			//change BK size by window
+			set_BK_width = width/org_width ; set_BK_height = height/org_height;
+			set_new_scale = (set_BK_width<set_BK_height) ? set_BK_width : set_BK_height;
+			BK.scale.x =BK.scale.y =  set_new_scale;
+			center.scale.x = center.scale.y = set_new_scale;
+
+			secCenter.scale.x = secCenter.scale.y = secCenter.scale.z = set_new_scale;
+			minCenter.scale.x = minCenter.scale.y = minCenter.scale.z = set_new_scale;
+			hrCenter.scale.x = hrCenter.scale.y = hrCenter.scale.z = set_new_scale;
+			sphere.scale.x = sphere.scale.y = sphere.scale.z = set_new_scale;
+			BK_Side.scale.x = BK_Side.scale.y = BK_Side.scale.z = set_new_scale;
+
+			if(window.circlea.scale.x){
+				circlea.scale.x = circlea.scale.y = circlea.scale.z = set_new_scale;
+			}
+		}
+
+		function changeTime(){
+			changeSec();
+			changeMin();
+			changeHr();
+			$('#showTime').html(""+new Date());
+		}
+
+		function changeSec(){
+			if (turn){
+				//secAngle = 2*Math.PI/60*new Date().getSeconds();
+				switch (secPointWay){
+					case "Sector" :
+						scene.add( secCenter );
+						secAngle = 2*Math.PI/60*new Date().getSeconds();
+						secCenter.rotation.y = -secAngle;
+						scene.remove(circlea);
+						break;
+					case "Analog" :
+						secAngle = 2*Math.PI/60*new Date().getSeconds()+
+						   2*Math.PI/60/1000*new Date().getMilliseconds();
+						secCenter.rotation.y = -secAngle;
+						scene.remove(circlea);
+						break;
+					case "Quartz" :
+						scene.remove(secCenter);
+						secAngle = 2*Math.PI/60*new Date().getSeconds()+
+						   2*Math.PI/60/1000*new Date().getMilliseconds();
+
+						   
+						   if(window.circlea){
+						   		scene.remove(circlea);
+						   		
+						   		//circlea.geometry.dispose();
+							    //circlea.material.dispose();//don't know if you need these, even
+							    //scene.remove(circlea);
+							    //circlea = undefined;//or
+							    //delete(circlea);
+							}
+							//new THREE.CylinderGeometry(  (width<height) ? width/8/4*3 : height/8/4*3,  (width<height) ? width/8/4 : height/8/4, 1, 64 ,64 , false, Math.PI,  Math.PI)
+							var a = new THREE.CylinderGeometry(  (width<height) ? width/8/4*3 : height/8/4*3,  (width<height) ? width/8/4 : height/8/4, 1, 64 ,64 , false, Math.PI,  secAngle);
+							//setCylinderAngle.parameters.thetaLength = secAngle;
+
+							circlea = new THREE.Mesh( a, MN_Material);
+							circlea.position.y = -20;
+							//circlea.position.z = 0;
+							circlea.rotation.z = Math.PI;
+							circlea.rotation.x = Math.PI/2;
+							//circlea.rotation.y = Math.PI/2;
+							scene.add( circlea );
+						break;
+				}
+			}
+			
+		//pivot.rotation.x = -secAngle;
+		//var axis = new THREE.Vector3(0.5,0.5,0.5);
+		//mesh.rotateOnAxis(axis,0.5);
+
+		}
+
+		function changeMin(){
+			if (turn){
+				minAngle = 2*Math.PI/60*new Date().getMinutes();
+			}
+			minCenter.rotation.y = -minAngle;
+		}
+
+		function changeHr(){
+			if (turn){
+				hrAngle = 2*Math.PI/12*new Date().getHours() + 2*Math.PI/12/60*new Date().getMinutes();
+
+				//circle.geometry.parameters.thetaLength++;
+			}
+			hrCenter.rotation.y = -hrAngle;
+		}
+		var a=0.005;
+		function animate() {
+
+			sec.material.color = new THREE.Color( text.secPointColor );
+			min.material.color = new THREE.Color( text.minPointColor );
+			hr.material.color = new THREE.Color( text.hrPointColor );
+			BK.material.color = new THREE.Color( text.BK_PointColor );
+
+			sphere.material.opacity += a;
+
+			if(sphere.material.opacity>=0.5){
+				a=-0.001;
+			}
+
+			if(sphere.material.opacity<=0.01){
+				a=0.001;
+			}
+			controls.update();
+			setTimeout(changeTime(),1000);
+
+			requestAnimationFrame(animate);
+			renderer.render(scene, camera);
+
+
+			camera2.position.copy( camera.position );
+			camera2.position.sub( controls.target ); // added by @libe
+			camera2.position.setLength( CAM_DISTANCE );
+
+			camera2.lookAt( scene2.position );
+			renderer2.render( scene2, camera2 );
+
+		}
+	</script>
+</head>
+
+<body>
+	<script>
+		init();
+		animate();
+	</script>
+	<div id="inset"></div>
+
+	<!--
+	<div id="colorControl">
+
+		<input id="Binded" type="text" value="e2ddcf" />
+		<span class="jPicker">sss</span>
+		BKColor &nbsp;: &nbsp;<input type="text" value="0xffffbb"> <br />
+		secColor &nbsp;: &nbsp;<input type="text" value="0xff0000"> <br />
+		Min_HrColor &nbsp;: &nbsp;<input type="text" value="0x000000"> <br />
+	</div> -->
+	
+	<div id="info" wid>My homework 1 by Three.js<br /><br />
+		<button id="toggle" style="position:relative; top:-8px;">Toggle Turn</button>
+		<button id="secPointWay" style="position:relative; top:-8px;">Analog</button><br />
+		Now way : <label id="nowWay">Sector</label><br /><br />
+		<p style="position:relative; top:-5px;" id="showTime">安安</p><br/>
+	</div>
+
+<input type="hidden" value="0xffffbb" id="BKColor">
+<input type="hidden" value="0x000000" id="Min_HrColor">
+<input type="hidden" value="0xff0000" id="SecColor">
+
+
+</body>
+</html>

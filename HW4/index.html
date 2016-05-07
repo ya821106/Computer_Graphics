@@ -1,0 +1,193 @@
+
+<html>
+<head>
+	<title>計算機圖學 HW4</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r74/three.min.js"></script>
+	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js">
+	</script>
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"></script>
+
+
+
+
+
+	<style type="text/css">
+		#info {
+			position: absolute;
+			top: 0px;
+			width: 100%;
+			padding: 10px;
+			text-align: center;
+			color: #ffff00
+		}
+
+		#gui {
+			position: absolute;
+			top: 50px;
+			right: 10px;
+			height: 500px;
+			//text-align: center;
+		}
+
+		body {
+			overflow: hidden;
+		}
+
+	</style>
+	<script >
+		var camera, scene, renderer;
+		var controls; 
+		var car_Plane;
+		var car=1;
+		var speed = Math.PI/10;
+		var theta=0;
+
+		function init() {
+			i=0;
+			scene = new THREE.Scene();
+			renderer = new THREE.WebGLRenderer();
+			width = window.innerWidth; height = window.innerHeight;
+			renderer.setSize( width, height);
+			renderer.setClearColor(0x888888);
+			$(function(){
+				$('body').append(renderer.domElement);
+			});
+			camera = new THREE.PerspectiveCamera(50, width / height, 1, 10000);
+			camera.position.z = -50;
+			camera.position.x = 100;
+			camera.position.y = 50;
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+			///////////////////
+			loadCar();
+			////////////
+			var head = drawHead();
+			scene.add(head);
+			THREE.ImageUtils.crossOrigin = '';  // no space between a pair of single quotes
+
+			bumpMap = THREE.ImageUtils.loadTexture("https://jyunming-chen.github.io/tutsplus/images/wood_oak_002_bump.jpg");
+			///////////
+			window.addEventListener('resize', onWindowResize, false);
+			
+		}
+		function loadCar(){
+			//////////////////
+
+			loader = new THREE.ObjectLoader();
+			//
+            loader.load( '/graph/HW4/model/ferrari-f1-race-car-threejs/ferrari-f1-race-car.json', function ( object ) {
+            	car = object;            	
+            	$($(car.children)).each(function(i){
+            		//console.log(this.name);
+            		if(this.name=='Plane'){
+						b = this;
+						car_Plane=b.clone();
+						
+						b.visible=false;
+            		}
+            		//console.log(this.name);
+            	})
+            	//car_Plane.add(car);
+            	//car.rotation.x=Math.PI/2;
+            	car_Plane.scale.x = car_Plane.scale.y = car_Plane.scale.z = 10;
+				car.scale.x = car.scale.y = car.scale.z = 5;	            		
+        		//car.position.x=5;
+        		//car.rotation.order = 'XZY';
+        		console.log("0_"+car);
+        		//console.log(car.position);
+        		scene.add(car);
+            	scene.add(car_Plane);
+            	//scene.add( object );
+            	animate();
+            } );
+
+        		console.log("02_"+car_Plane);
+            console.log("1_"+car);
+            loader.onLoadComplete=function(){
+            	console.log("2_"+car);
+            }
+			////////////////////
+		}
+		function makeBox(x, y, z) {
+			var materials = [];// must give 6 materials for box geometry
+			materials.push(new THREE.MeshLambertMaterial({side:THREE.DoubleSide}));
+			materials.push(new THREE.MeshLambertMaterial({side:THREE.DoubleSide}));
+			materials.push(new THREE.MeshLambertMaterial({visible:false}));
+			materials.push(new THREE.MeshLambertMaterial({side:THREE.DoubleSide}));
+			materials.push(new THREE.MeshLambertMaterial({side:THREE.DoubleSide}));
+			materials.push(new THREE.MeshLambertMaterial({side:THREE.DoubleSide}));
+
+			var boxGeometry = new THREE.BoxGeometry(x, y, z);
+			var boxMaterial = new THREE.MeshFaceMaterial(materials); 
+
+			return new THREE.Mesh(boxGeometry,boxMaterial);
+		}
+		function drawHead(){
+			var headX=73,headY=48,headZ=26*2;
+			head = makeBox(headX, headY, headZ);
+			head.material.materials[2]=new THREE.MeshLambertMaterial({side:THREE.DoubleSide});
+			head.position.y=24;
+			THREE.ImageUtils.crossOrigin = '';
+
+			var face ='410106208.jpg';
+			putMap(head, 4, face);
+
+			var faceR = 'http://i.imgur.com/pBkPnxV.jpg';
+			putMap(head, 0, faceR);
+
+			var faceL = 'http://i.imgur.com/WQUFckW.jpg';
+			putMap(head, 1, faceL); 
+
+			var faceTOP = 'http://i.imgur.com/Gp11s37.jpg';
+			putMap(head, 2, faceTOP);  
+
+			var faceBK ='http://i.imgur.com/CDjx9Zs.jpg';
+			putMap(head, 5, faceBK);
+
+			return head;
+		}
+		function putMap(part, side, photo){
+			var text = THREE.ImageUtils.loadTexture(photo);
+			part.material.materials[side]=new THREE.MeshLambertMaterial({side:THREE.DoubleSide,map:text});
+
+		}
+
+		function onWindowResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+
+		function animate() {
+			controls.update();
+			
+			car.position.set(Math.cos(-theta)*50,0,Math.sin(-theta)*50);
+			car.rotation.y = theta;
+			theta+=0.01;
+			
+			//console.log(car.position);
+			//camera.lookAt(car.position);
+			
+			requestAnimationFrame(animate);
+			renderer.render(scene, camera);
+
+
+		}
+
+	</script>
+</head>
+
+<body>
+	<script>
+		init();
+		animate();
+	</script>
+	<div id="info">Homework 4
+		<div id="moveFocuseOuter" tabindex="-1"></div>
+		<br> CAR_Modol
+	</div>
+
+</body>
+</html>
