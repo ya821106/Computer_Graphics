@@ -109,6 +109,7 @@
 		hiddeJsFiddle(0);
 	}
 	var show = function(i){
+		$("#DIV_HW"+i).find("iframe").contents().find("div[id='moveFocuseOuter']").focus();
 		$("#DIV_HW"+i).show();
 		$($("#DIV_HW"+i).find("iframe")).width("99%");
 		$($("#DIV_HW"+i).find("iframe")).height("600");
