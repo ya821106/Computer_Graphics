@@ -22,6 +22,7 @@
 		JsFiddle=["https://jsfiddle.net/Zong/oaz2jmqL/1/show", "https://jsfiddle.net/Zong/v63jrnne/42/show", "https://jsfiddle.net/Zong/swnjLrzo/4/show",""];
 		buildTotalHW();
 		buildButton();
+		showGIF();
 		/*
 		$( "div" ).click(function() {
 			//console.log($( this  ).find("iframe").attr("id"));
@@ -99,6 +100,24 @@
 		hiddeJsFiddle(0);
 
 	}
+	var showGIF = function(){
+		jQuery('<div/>', {
+			    id: 'DIV_HW_GIF'
+			}).appendTo('#showTotal');
+
+			//jQuery("<br /><label>"+'&nbsp;&nbsp;HW'+"</label><br />").appendTo('#DIV_HW_GIF'+i);
+			jQuery('<iframe/>', {
+			    id: 'HW_GIF',
+			    src: "show.html",
+			    style: 'width:100%; height:100vh;',
+			    sandbox: 'allow-forms allow-popups allow-scripts allow-same-origin allow-modals',
+			    frameborder: '0'
+			}).appendTo('#DIV_HW_GIF');
+
+			jQuery("<br />").appendTo('#DIV_HW_GIF');
+		hiddeJsFiddle(0);
+		hiddeShow(0);
+	}
 	var showTotal = function(){
 		for(var i =1;i<=hwNumber;i++){
 			$("#DIV_HW"+i).show();
@@ -107,6 +126,7 @@
 			$($("#DIV_HW"+i).find("iframe")).height(W);
 		}
 		hiddeJsFiddle(0);
+		$("#DIV_HW_GIF").hide();
 	}
 	var show = function(i){
 		$("#DIV_HW"+i).find("iframe").contents().find("div[id='moveFocuseOuter']").focus();
@@ -115,6 +135,7 @@
 		$($("#DIV_HW"+i).find("iframe")).height("600");
 		hiddeShow(i);
 		hiddeJsFiddle(0);
+		$("#DIV_HW_GIF").hide();
 	}
 	var hiddeShow = function(a){
 		for(var i =1;i<=hwNumber;i++){
@@ -132,6 +153,7 @@
 			$($("#JsFiddle_HW"+i).find("iframe")).height(W);
 		}
 		hiddeShow(0);
+		$("#DIV_HW_GIF").hide();
 	}
 	var showJsFiddle = function(i){
 		$("#JsFiddle_HW"+i).show();
@@ -139,6 +161,7 @@
 		$($("#JsFiddle_HW"+i).find("iframe")).height("600");
 		hiddeShow(0);
 		hiddeJsFiddle(i);
+		$("#DIV_HW_GIF").hide();
 	}
 	var hiddeJsFiddle = function(a){
 		for(var i =1;i<=hwNumber;i++){
@@ -192,6 +215,8 @@
         <div class="btn-group">
             <button class="btn dropdown-toggle" data-toggle="dropdown">Total <span class="caret"></span></button>
             <ul class="dropdown-menu">
+            	<li><a href="#" onclick="javascript:$('#DIV_HW_GIF').show();hiddeShow(0);
+		hiddeJsFiddle(0);">ShowGIF</a></li>
             	<li><a href="#" onclick="showTotal()">Show</a></li>
                 <li><a href="#" onclick="showTotalJsFiddle()">JSFIDDLE</a></li>
             </ul>
