@@ -146,7 +146,7 @@
 			doPlane();
 			doSpotLight_init();
 			doTeaPot();
-			
+			window.addEventListener('resize', onWindowResize, false);
 		}
 		function doPlane(){
 			THREE.ImageUtils.croosOrigin = '';
@@ -294,6 +294,12 @@
 				scene.add(jsonModel2);
 
 			});
+		}
+		function onWindowResize() {
+			width = parent.window.innerWidth; height = parent.window.innerHeight;
+			camera.aspect = parent.window.innerWidth / parent.window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(parent.window.innerWidth, parent.window.innerHeight);
 		}
 		function animate() {
 			angle += 0.01;
