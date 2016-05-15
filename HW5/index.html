@@ -53,7 +53,7 @@
 		vec4 vertexPosition;             // vertex position (per-vertex shading)
 
 		void perVertexShading() {
-			if (vertexPosition.x > 0.0) 
+			if (vertexPosition.x < 0.0) 
 				vertexWayColor = vec3 (1,1,1);
 			else
 				vertexWayColor = vec3 (0,0,0);
@@ -89,7 +89,7 @@
 		varying vec4 pixelPosition;
 
 		void perPixelShading() {
-			if (pixelPosition.x > 0.0) 
+			if (pixelPosition.x < 0.0) 
 				pixelWayColor = vec3 (1,1,1);
 			else
 				pixelWayColor = vec3 (0,0,0);
