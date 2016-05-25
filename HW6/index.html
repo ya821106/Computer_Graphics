@@ -1,0 +1,292 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>計算機圖學</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+	<style type="text/css">
+		#info {
+			position: absolute;
+			top: 2%;
+			width: 100%;
+			padding: 10px;
+			text-align: center;
+			color: #ffff00
+		}
+
+		body {
+			overflow: hidden;
+		}
+	</style>
+</head>
+<body> 
+	<div id="info" ><label id="TteapotNumberber">1</label> <label id="TShow"> teapot is showing</label><br /><br />
+		<div id="moveFocuseOuter" tabindex="-1"></div>
+	</div>
+	<script id="myVertexShader" type="x-shader/x-vertex">
+		uniform int shading;
+		uniform int coordinate;
+		varying vec3 vertexWayColor;
+		varying vec4 pixelPosition;     // fragment position (per-pixel shading)
+		vec4 vertexPosition;             // vertex position (per-vertex shading)
+
+		void perVertexShading() {
+			if (vertexPosition.x < 0.0) 
+				vertexWayColor = vec3 (1,1,1);
+			else
+				vertexWayColor = vec3 (0,0,0);
+		}
+		void perPixelShading() {
+
+		}
+		void main() {
+		if(coordinate == 0){//object
+			vertexPosition = vec4(position, 1.0);
+			gl_Position = projectionMatrix * modelViewMatrix * vertexPosition;
+		}
+		else if(coordinate == 1){//world
+			vertexPosition = modelMatrix * vec4(position, 1.0);
+			gl_Position = projectionMatrix * viewMatrix * vertexPosition;
+		}
+		else{// eye
+			vertexPosition = modelViewMatrix * vec4(position, 1.0);
+			gl_Position = projectionMatrix * vertexPosition;
+		}
+
+		pixelPosition = vertexPosition;
+		if (shading == 0)
+			perVertexShading();
+		else
+			perPixelShading();
+		}
+	</script>
+	<script id="myFragmentShader" type="x-shader/x-fragment">
+		varying vec3 vertexWayColor;
+		uniform int shading;
+		vec3 pixelWayColor;
+		varying vec4 pixelPosition;
+
+	    uniform float opacity;
+
+		void perPixelShading() {
+			if (pixelPosition.x < 0.0) 
+				pixelWayColor = vec3 (1,1,1);
+			else
+				pixelWayColor = vec3 (0,0,0);
+		}
+		void main() {
+			//gl_FragColor = vec4 (color, 1.0);
+			if( shading == 0 ) {
+				gl_FragColor = vec4 (vertexWayColor, opacity); 
+			}
+			else{
+				perPixelShading();
+				gl_FragColor = vec4(pixelWayColor, opacity);  
+			}
+		}
+	</script>
+	<script>
+		var scene, renderer, light, sphere;
+		var raycaster;
+		var mouse = new THREE.Vector2();
+		var pickables = [], pickableForStopTeapot = [], teapots = [];
+		var pointLight, lightSphere, teapotMesh, teapotMaterial;
+		var angle = 0, teapotNumber = 0, teapotteapotNumber = 0;
+		var camera, controls;
+
+		var Teapot = function (mesh) {
+			this.mesh = mesh;
+			pickableForStopTeapot.push (mesh);
+			this.mesh.name = 'teapotNumber'+ teapotNumber; 
+			teapotNumber++;
+			teapotteapotNumber++;
+			this.angle = 0;
+			this.turnSpeed = 0.3;
+			this.turn = true;
+			this.life = 150;
+			this.alpha = 1.0;
+		};
+
+		function findTeapot(mesh) {
+			for (var i = 0; i < teapots.length; i++) {
+				if (teapots[i].mesh.name === mesh.name)
+					return teapots[i];
+			}
+		}
+
+		Teapot.prototype.update = function () {
+			if (this.turn) {
+				this.angle += this.turnSpeed;
+			}
+			this.mesh.rotation.y = this.angle;
+
+			this.life -= 0.1;
+			if(this.life < 0){
+				this.expire();
+			}
+
+			this.turnSpeed /= 1.01;
+
+			this.alpha -= 0.002;
+			this.mesh.material.uniforms.opacity.value = this.alpha;
+			this.mesh.material.uniforms.lightpos.value.copy(pointLight.position);  
+		};
+
+		Teapot.prototype.expire = function () {
+			scene.remove(this.mesh);
+			teapotteapotNumber--;
+			teapots.shift();
+			pickableForStopTeapot.shift();
+		}
+
+		init();
+		animate();
+
+		function init() {
+			scene = new THREE.Scene();
+			camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 1, 1000);
+			camera.position.set (0, 100, 200);
+			renderer = new THREE.WebGLRenderer();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+			renderer.setClearColor(0x888888);
+			document.body.appendChild(renderer.domElement);
+			window.addEventListener('resize', onWindowResize, false);
+			controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+			doGround();
+			doPlatform();
+			doPointLight();
+			loadTeapot()
+
+			raycaster = new THREE.Raycaster();
+			document.addEventListener('mousedown', onDocumentMouseDown, false);
+		}
+
+		function loadTeapot(){
+			var jsonLoader = new THREE.JSONLoader();
+			var url = "../HW5/models/teapot.json";
+			teapotMaterial = new THREE.ShaderMaterial({
+				transparent: true,
+				uniforms: {
+					lightpos: {type: 'v3', value: pointLight.position},
+					opacity: {type: 'f', value: 1.0}
+				},
+				vertexShader: document.getElementById('myVertexShader').textContent,
+				fragmentShader: document.getElementById('myFragmentShader').textContent
+			});
+			jsonLoader.load(url, function(geometry, materials) {
+				teapotMesh = new THREE.Mesh(geometry, teapotMaterial);
+				teapotMesh.scale.set(5, 5, 5);
+			});
+		}
+		function doPointLight(){
+			pointLight = new THREE.PointLight(0xffffff);
+			scene.add(pointLight);
+			lightSphere = new THREE.Mesh(
+							new THREE.SphereGeometry(5),
+							new THREE.MeshBasicMaterial(
+								{
+									color: 0xffff00,
+									wireframe: true
+								}
+							)
+						);
+			scene.add(lightSphere);
+		}
+		function doPlatform(){
+			platform = new THREE.Mesh (
+								new THREE.BoxGeometry (50,10,80),
+								new THREE.MeshPhongMaterial(
+										{ color: 0xdddddd, specular: 0x009900, shininess: 30, shading: THREE.FlatShading } 
+									) 
+						);
+			platform.position.set (60,5,50);
+			var platform2 = platform.clone();
+			platform2.scale.y = 3;
+			platform2.position.set (-60,15,-30);
+			scene.add (platform);
+			scene.add (platform2);
+			pickables.push(platform);
+			pickables.push(platform2);
+		}
+		function doGround(){
+			var ground = new THREE.Mesh (
+								new THREE.PlaneGeometry (200,200),
+								new THREE.MeshPhongMaterial({color:0xff7834}
+								)
+							);
+			scene.add (ground);
+			ground.rotation.x = -Math.PI/2;
+			pickables.push(ground);
+		}
+		function onDocumentMouseDown(event) {
+			event.preventDefault();
+			mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+			mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+			raycaster.setFromCamera(mouse, camera);
+
+			if(event.which == 3){
+				var intersects = raycaster.intersectObjects(pickables);
+				if (intersects.length > 0) {//限定有點擊到物體才設置茶壺 -> 沒點擊到物體:沒有加進pickables的物件
+					var origin = new THREE.Vector3();
+					origin.copy (intersects[0].point);
+					origin.y = 50;
+
+					raycaster.set (origin, new THREE.Vector3(0,-1,0));
+					intersects = raycaster.intersectObjects (scene.children);
+
+					if (intersects.length > 0) {
+						if(typeof(teapotMesh) != "undefined"){
+							var mesh = teapotMesh.clone();
+							mesh.material = teapotMaterial.clone();
+							var teapot = new Teapot(mesh);
+							scene.add(mesh);
+							teapots.push(teapot);
+							teapot.mesh.position.copy (intersects[0].point);
+							console.log(intersects[0].point);
+						}
+					}
+				}
+			}
+			else if(event.which == 1){
+				var intersects = raycaster.intersectObjects(pickableForStopTeapot);
+				if (intersects.length > 0) {
+					var teapot = findTeapot (intersects[0].object);
+					teapot.turn = !teapot.turn;
+				}	
+			}
+		}
+
+		function animate() {
+			controls.update();
+			angle += 0.03;
+
+			pointLight.position.set(50 * Math.cos(angle), 80, 50 * Math.sin(angle));
+			lightSphere.position.copy(pointLight.position);
+			for (var i = 0; i < teapots.length; i++) {
+				teapots[i].update();
+			}
+			document.getElementById('TteapotNumberber').innerHTML = teapotteapotNumber;
+			if( teapotteapotNumber>1){
+				document.getElementById('TShow').innerHTML = " teapots are showing";
+			}
+			else{
+				document.getElementById('TShow').innerHTML = " teapot is showing";	
+			}
+			requestAnimationFrame(animate);
+			renderer.render(scene, camera);
+		}
+
+		function onWindowResize() {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(window.innerWidth, window.innerHeight);
+		}
+
+		</script>
+
+</body>
+</html>
