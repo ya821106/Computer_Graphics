@@ -26,26 +26,32 @@
 	</style>
 </head>
 <body> 
-	<div id="info">hw7 tryout
-		<br> RTT, mono + blocker (for colored focus)
+	<div id="info">Render to Texture
+		<br> hw7: monochrome
+		<br> I want to add a colored focus
 	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r76/three.min.js"></script>
 	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js">
 	</script>
-	<script src="//cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5/dat.gui.min.js"></script>
-
-	<script id="monoVS" type="x-shader/x-vertex">
+	<script src="//cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"></script>
+	<script id="myVertexShader" type="x-shader/x-vertex">
 		varying vec2 vUv;
+		uniform float fade_Saturation;
+		uniform float originalz_Hsv_s;
 		void main() {
-			gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0);
+			//position = vec3( 1.0, 1.0, 1.0);
+			gl_Position = projectionMatrix* modelViewMatrix * vec4( position.xy,-100.0, 1.0);
 			vUv = uv;
 		}
 	</script>
-	<script id="monoFS" type="x-shader/x-fragment">
+	<script id="myFragmentShader" type="x-shader/x-fragment">
+		uniform float fade_Saturation;
+		uniform float originalz_Hsv_s;
+		int i = 1;
 		uniform sampler2D texture;
 		uniform sampler2D texture2;
+		//uniform sampler2D texture3;
 		varying vec2 vUv;
-		uniform float fade;
 		vec3 rgb2hsv(vec3 c)
 		{
 			vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
@@ -64,159 +70,283 @@
 			return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
 		}	
 		void main() {
+			vec3 c;
 			vec4 color = texture2D (texture, vUv);
 			vec4 color2 = texture2D (texture2, vUv);
-			vec3 c = color2.rgb + color.rgb;  // blending equation
+			//vec4 color3 = texture2D (texture3, vUv);
+			//c = color.rgb * 0.5 + color2.rgb * color2.a * (1.0 - 0.5);  // blending equation
+			c = color.rgb;  // blending equation
+			//c = color2.rgb + color.rgb;  // blending equation
 			vec3 hsv = rgb2hsv (c);
-			//vec3 hsv = rgb2hsv (color.rgb);
-
-					hsv.y /= pow(2.,fade);
-		//hsv.y = 0.0;
-
-		vec3 rgb = hsv2rgb (hsv.xyz);
-		gl_FragColor = vec4 (rgb, 1.0);
+			if(i == 1){
+				//originalz_Hsv_s = hsv.y;
+				i = 0;
+			}
+			hsv.y = fade_Saturation/100.0;//0.0;
+			vec3 rgb = hsv2rgb (hsv.xyz);
+			gl_FragColor = vec4 (rgb, 1.0);
 		}
-</script>
+	</script>
 
+	<script id="myVertexShader2" type="x-shader/x-vertex">
+		varying vec2 vUv;
+		uniform float fade_Saturation;
+		void main() {
+			//position = vec3( 1.0, 1.0, 1.0);
+			gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0);
+			vUv = uv;
+		}
+	</script>
+	<script id="myFragmentShader2" type="x-shader/x-fragment">
+		uniform sampler2D texture;
+		varying vec2 vUv;
+		vec3 rgb2hsv(vec3 c)
+		{
+			vec4 K = vec4(0.0, -1.0 / 3.0, 2.0 / 3.0, -1.0);
+			vec4 p = mix(vec4(c.bg, K.wz), vec4(c.gb, K.xy), step(c.b, c.g));
+			vec4 q = mix(vec4(p.xyw, c.r), vec4(c.r, p.yzx), step(p.x, c.r));
 
-<script>
-	var renderer, camera, controls;
-	var pointLight;
-	var sceneCanvas, sceneMono, sceneColor;
-	var camera2;
-	var rtTexture;
-	var torus;
-	var gcontrols;
+			float d = q.x - min(q.w, q.y);
+			float e = 1.0e-10;
+			return vec3(abs(q.z + (q.w - q.y) / (6.0 * d + e)), d / (q.x + e), q.x);
+		}
 
-	// blocker pass
-	// 1st pass: torus (colorWrite off)
-	// 2nd pass: column
+		vec3 hsv2rgb(vec3 c)
+		{
+			vec4 K = vec4(1.0, 2.0 / 3.0, 1.0 / 3.0, 3.0);
+			vec3 p = abs(fract(c.xxx + K.xyz) * 6.0 - K.www);
+			return c.z * mix(K.xxx, clamp(p - K.xxx, 0.0, 1.0), c.y);
+		}	
+		void main() {
+			vec3 c;
+			vec4 color = vec4(vec3(1.0,0.0,1.0),1.0);
+			c = color.rgb;//color2.rgb + color.rgb;  // blending equation
+			vec3 hsv = rgb2hsv (c);
+			hsv.y = 100.0/100.0;//0.0;
+			vec3 rgb = hsv2rgb (hsv.xyz);
+			gl_FragColor = vec4 (rgb, 1.0);
+		}
+	</script>
 
-
-	// 
-	// render sceneMono to rtTexture (camera)
-	// render sceneCanvas (rtTexture, with monochrome shader) to screen (camera2)
-	// render sceneMono (colorWrite off) (camera)
-	// render sceneColor (camera)
-
-	init();
-	animate();
-	THREE.ImageUtils.crossOrigin = '';
+	<script>
+		var renderer, camera, controls;
+		var pointLight;
+		var scene, sceneRTT, rtTexture, torus;
+		var rttmaterial, quad;
+		var camera2;
+		var FizzyText = function() {
+		  this.fade_Saturation = 0.0	;
+		  this.explode = function() {};
+		  // Define render logic ...
+		};
+		var setClearColor = 1;
+		//////////////////////////////////////////////
+			THREE.ImageUtils.crossOrigin = '';
 			var photo = name;
 			var text = THREE.ImageUtils.loadTexture('sky.jpg');
+			//////////////////////////////////////////////
+		init();
+		animate();
+		//material.color.setHSL
+		function putGUI(){
+			var gui = new dat.GUI();
+			gui.domElement.id = 'gui';
+			var text = new FizzyText();
+			var tmpBox = gui.addFolder("tmpBox");
+			var fade_Saturation = gui.add(text, 'fade_Saturation', 0, 100);
 
-	function init()
-	{
+			fade_Saturation.onChange(function(value) {
+				//console.log(value);
+				rttmaterial.uniforms.fade_Saturation.value = value;
+				switch(value){
+					case 'MeshPhongMaterial':
+						
+						break;
+					case 'MeshLambertMaterial':
+						
+						break;
+				}
+			});
 
-		rtTexture = new THREE.WebGLRenderTarget( 
-			1024,1024,
-			{ minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat } 
-			);
-
-		renderer = new THREE.WebGLRenderer({antialias: true});
-		renderer.setSize (window.innerWidth, window.innerHeight);
-		document.body.appendChild (renderer.domElement);
-		renderer.setClearColor (0x888888);
-		renderer.autoClear = false;
-
-		camera = new THREE.PerspectiveCamera (45, window.innerWidth/window.innerHeight, 0.1, 10000);
-		camera.position.y = 0;
-		camera.position.z = 400;
-		camera.lookAt (new THREE.Vector3(0,0,0));
-
-		controls = new THREE.OrbitControls (camera, renderer.domElement);
-		///////////////////////////////////////////////////////////////////////		
-		sceneMono = new THREE.Scene();	
-		pointLight = new THREE.PointLight (0xffffff, 1.0);
-		pointLight.position.set (0,200,500);
-		sceneMono.add (pointLight);
-
-		torus = new THREE.Mesh (new THREE.TorusGeometry(10, 3, 16, 100),
-			new THREE.MeshLambertMaterial({color:0x12ffee, 
-				colorWrite:false
-			}));
-		torus.scale.set (3,3,3);
-		torus.rotation.x = Math.PI/2;
-		sceneMono.add (torus);
-
-		gcontrols = {
-			fade: 2.0,
-		};
-
-		var gui = new dat.GUI();
-		gui.domElement.id = 'gui';
-
-		gui.add(gcontrols, 'fade', 0.1, 5.0);
-
-		gcontrols.onchange = function () {
-			console.log ('pp');
-		//console.log (gcontrols.fade);
 		}
+		function init()
+		{
+			//http://jsfiddle.net/jmcjc5u/xg21q4sa/
+			rtTexture = new THREE.WebGLRenderTarget( 
+				1024,1024,
+				{ minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat }//,texture: text}//,depthBuffer: false} 
+				);
 
-		sceneColor = new THREE.Scene();
-		var column = new THREE.Mesh (new THREE.BoxGeometry (20,50,20),
-			new THREE.MeshLambertMaterial({color:0xff1234}));
-		//sceneColor.add (pointLight);  
-		// same light cannot be added to two scenes
-		var pointLight2 = new THREE.PointLight (0xffffff, 1.0);
-		pointLight2.position.set (0,200,500);
-		sceneColor.add (pointLight2);
-		sceneColor.add (column);
+			rtTexture2 = new THREE.WebGLRenderTarget( 
+				1024,1024,
+				{ minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat }//,texture: text}//,depthBuffer: false} 
+				);
 
-		sceneCanvas = new THREE.Scene();
-		camera2 = new THREE.OrthographicCamera (-10,10,10,-10, -10,100);
-		camera2.position.z = 5;
-		monochromeMat = new THREE.ShaderMaterial ({
-			uniforms: {
-				texture: {type: 't', value: rtTexture},
-				texture2: { type: "t", value: text },
-				fade:{type:'f', value:2.0}
-			},
-			vertexShader: document.getElementById('monoVS').textContent,
-			fragmentShader: document.getElementById('monoFS').textContent,
-		});
-		monochromeMat.depthWrite = false;
+			renderer = new THREE.WebGLRenderer({antialias: true});
+			renderer.setSize (window.innerWidth, window.innerHeight);
+			document.body.appendChild (renderer.domElement);
+			if(setClearColor==true)
+			renderer.setClearColor (0x888888);
+			renderer.autoClear = false;
 
-		var plane = new THREE.Mesh (new THREE.PlaneGeometry(20,20), monochromeMat);
-		sceneCanvas.add (plane);
-	}
+			camera = new THREE.PerspectiveCamera (45, window.innerWidth/window.innerHeight, 0.1, 10000);
+			camera.position.y = 0;
+			camera.position.z = 400;
+			camera.lookAt (new THREE.Vector3(0,0,0));
 
-	window.onresize = function () {
-		camera.aspect = window.innerWidth / window.innerHeight;
-		camera.updateProjectionMatrix();
-		renderer.setSize (window.innerWidth, window.innerHeight);
-	}
+			camera2 = camera.clone();
+			//camera2 = new THREE.OrthographicCamera (-10,10,10,-10, -10,100);
+			//camera2.position.z = 5;
+			// add control here (after the camera is defined)
+			controls = new THREE.OrbitControls (camera, renderer.domElement);
+			//////////////////////////////////////////////////////////////////////////
+			doSomething();
+			
+			putGUI();
+			//putBK();
+			var jsonLoader = new THREE.JSONLoader();
+			var url = "simple-rock.json";
+			jsonLoader.load(url, function(geometry, materials) {
+				//var material = new THREE.MeshFaceMaterial(materials);
+				jsonModel = new THREE.Mesh(geometry, materials);
+				jsonModel.scale.set(100, 100, 100);
+				jsonModel.castShadow = true;
+				jsonModel.receiveShadow = true; // self shadow	
+				scene.add(jsonModel);
 
-	// block does not work for r70 (r73 & r76 ok)
-	function animate()
-	{
-		controls.update();
-		monochromeMat.uniforms.fade.value = gcontrols.fade;
+			});
+		}
+		function getMap(name){
+			THREE.ImageUtils.crossOrigin = '';
+			var photo = name;
+			var text = THREE.ImageUtils.loadTexture(photo);
+			return  new THREE.MeshLambertMaterial({side:THREE.DoubleSide,map:text});
+		}
+		function getMapText(name){
+			THREE.ImageUtils.crossOrigin = '';
+			var photo = name;
+			return THREE.ImageUtils.loadTexture(photo);
+		}
+		function putBK(){
+			//背景
+			var gridXZ = new THREE.RingGeometry( 0, 200, 32 );
+			var BK_material = new THREE.MeshBasicMaterial({
+				wireframe: false,
+				//color: 0xFFFFFF
+				color: 0xFFFFBB
+			});
+			BK = new THREE.Mesh(gridXZ, BK_material);
+			BK.position.y = -20;
+			scene.add(BK);
+		}
+		function doSomething(){
+			// render a torus to texture
+			// then apply the texture to a quad,
+			// with a monochrome filter
 
-		console.log (gcontrols.fade);
+			sceneRTT = new THREE.Scene();	
+			
+			var plane2 = new THREE.PlaneGeometry( 512,384 );
+			sky = new THREE.Mesh (plane2, getMap('sky.jpg'));
+			//sceneRTT.add (sky);
 
-		requestAnimationFrame ( animate );
-		renderer.clear();
+			scene = new THREE.Scene();
 
-		renderer.setClearColor (0x888800);
+//////////////////////////////////////////////
+			/*
+			THREE.ImageUtils.crossOrigin = '';
+			var photo = name;
+			var text = THREE.ImageUtils.loadTexture('sky.jpg');
+			var uniforms = THREE.UniformsUtils.clone(THREE.ShaderLib.phong.uniforms);
+	        uniforms.map.value = text;
 
-		// turn colorWrite true
-		torus.material.colorWrite = true;
-		renderer.render (sceneMono, camera, rtTexture, true);
-		renderer.setClearColor (0x888800);
-		renderer.render (sceneCanvas, camera2);
+	        var parameters = {
+	            fragmentShader: THREE.ShaderLib.phong.fragmentShader,
+	            vertexShader: THREE.ShaderLib.phong.vertexShader,
+	            uniforms: uniforms,
+	            lights: true,
+	            fog: false,
+	            side: THREE.DoubleSide,
+	            blending: THREE.NormalBlending,
+	            transparent: (uniforms.opacity.value < 1.0)
+	        };
 
-		// above test ok (excpt no shading ...)
-		//// but combine wont work////////////////////////
-		// below test ok
+	        rttmaterial = new THREE.ShaderMaterial(parameters);
+	        rttmaterial.map = true; // Not a parameters of ShaderMaterial, but necessary to use texture
+	        */
+////////////////////////////////////////////////
+			rttmaterial = new THREE.ShaderMaterial( {
+				uniforms: {
+					texture: {type: "t",value: rtTexture},
+					texture2: { type: "t", value: text },
+					//texture3: {type: "t",value: rtTexture2},
+					//texture: {type: "t",value: text},
+					fade_Saturation: {type:'f', value: 0}
+				},
+				//map: getMapText('sky.jpg'),
+				vertexShader: document.getElementById( 'myVertexShader' ).textContent,
+				fragmentShader: document.getElementById( 'myFragmentShader' ).textContent} 
+				);
+			rttmaterial.side = THREE.DoubleSide;
 
-		// turn colorWrite false
+			var plane = new THREE.PlaneGeometry( 300,300 );
+			quad = new THREE.Mesh (plane, rttmaterial);
+			scene.add (quad);
 
-		torus.material.colorWrite = false;
-		renderer.render (sceneMono, camera);  // set up depth buffer
-		renderer.render (sceneColor, camera);
+			var quadMap = quad.clone();
+			quadMap.material = getMap('sky.jpg');
+			//sceneRTT.add (quadMap);
 
-	}
+			putLight();
+			putBlock();
+		}
+		function putLight(){
+			sceneMono = new THREE.Scene();	
+			pointLight = new THREE.PointLight (0xffffff, 1.0);
+			pointLight.position.set (0,200,500);
+			sceneMono.add (pointLight);
+
+			torus = new THREE.Mesh (new THREE.TorusGeometry(10, 3, 16, 100),
+				new THREE.MeshLambertMaterial({color:0xffffff}));
+			torus.scale.set (10,10,10);
+			torus.rotation.x = Math.PI/2;
+			sceneMono.add (torus);
+		}
+		function putBlock(){
+			sceneColor = new THREE.Scene();
+			var column = new THREE.Mesh (new THREE.BoxGeometry (20,50,20),
+				new THREE.MeshLambertMaterial({color:0xff00ff}));
+			//sceneColor.add (pointLight);  
+			// same light cannot be added to two scenes
+			var pointLight2 = new THREE.PointLight (0xffffff, 1.0);
+			pointLight2.position.set (0,200,500);
+			sceneColor.add (pointLight2);
+			sceneColor.add (column);
+		}
+		window.onresize = function () {
+			camera.aspect = window.innerWidth / window.innerHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize (window.innerWidth, window.innerHeight);
+		}
+		function animate(){
+			controls.update();
+			requestAnimationFrame ( animate );
+			renderer.clear();
+
+			if(setClearColor)
+			renderer.setClearColor (0x888800);
+
+			
+			torus.material.colorWrite = true;
+			renderer.render (sceneMono, camera, rtTexture, true);
+			if(setClearColor)
+			renderer.setClearColor (0x888800);
+			renderer.render (scene, camera2);
+
+			torus.material.colorWrite = false;
+			renderer.render (sceneMono, camera);  
+			renderer.render (sceneColor, camera);
+		}
 
 </script>
 
