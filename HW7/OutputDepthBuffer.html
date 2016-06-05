@@ -1,0 +1,172 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>計算機圖學</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<style type="text/css">
+		#body {
+			background-color: #000000;
+			margin: 0px;
+			overflow: hidden;
+			font-family: Monospace;
+			font-size: 13px;
+			text-align: center;
+			font-weight: bold;
+		}
+
+		a {
+			color: #00ff78;
+		}
+
+		#info {
+			color: #fff;
+			position: absolute;
+			text-align: center;
+			top: 0px;
+			width: 100%;
+			padding: 5px;
+		}
+
+	</style>
+</head>
+<body> 
+	<div id="info">
+		Output Depth Buffer to RenderTarget
+	</div>
+
+	<script src="https://mrdoob.github.com/three.js/build/three.js"></script>
+	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+	<script src="//cdnjs.cloudflare.com/ajax/libs/dat-gui/0.5.1/dat.gui.min.js"></script>
+	<script>
+	
+		var FizzyText = function() {
+			  this.dd = 0;
+			  this.explode = function() {};
+			  // Define render logic ...
+			};
+		putGUI();
+		function putGUI(){
+			var gui = new dat.GUI();
+			gui.domElement.id = 'gui';
+			var text = new FizzyText();
+			var tmpBox = gui.addFolder("tmpBox");
+			var dd = gui.add(text, 'dd', 0, 1);
+
+			dd.onChange(function(value) {
+				//console.log(value);
+				meshMaterial.uniforms.dd.value = value;
+			});
+
+		}
+		
+	</script>
+	<script id="myVertexShader" type="x-shader/x-vertex">
+		void main() {
+			gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
+		}
+	</script>
+	<script id="myFragmentShader" type="x-shader/x-fragment">
+		uniform float dd;
+		void main() {
+			float d = gl_FragCoord.z;  // depth value
+			//dd = d;
+			gl_FragColor = vec4(d,d,d, 1.0);
+			//gl_FragColor = vec4(dd,dd,dd, 1.0);
+		}
+		</script>
+
+		<script>
+			var camera, scene, renderer;
+			var controls;
+			var depthRenderTarget;
+			// var depthMaterial;
+
+			init();
+			animate();
+
+			function init() {
+
+				renderer = new THREE.WebGLRenderer({
+					antialias: false
+				});
+				renderer.setClearColor(0xa0a0a0);
+				renderer.setPixelRatio(window.devicePixelRatio);
+				renderer.setSize(window.innerWidth, window.innerHeight);
+				document.body.appendChild(renderer.domElement);
+
+				camera = new THREE.PerspectiveCamera(35, window.innerWidth / window.innerHeight, 30, 170);
+				camera.position.z = 50;
+				controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+				/*
+				depthMaterial = new THREE.MeshDepthMaterial();
+				depthMaterial.depthPacking = THREE.RGBADepthPacking;
+				depthMaterial.blending = THREE.NoBlending;
+				*/
+
+				var pars = {
+					minFilter: THREE.LinearFilter,
+					magFilter: THREE.LinearFilter
+				};
+				depthRenderTarget = new THREE.WebGLRenderTarget(window.innerWidth, window.innerHeight, pars);
+
+				scene = new THREE.Scene();
+
+				meshMaterial = new THREE.ShaderMaterial({
+					uniforms: {
+						dd: {type:'f',value:'0.'}
+					},
+					vertexShader: document.getElementById('myVertexShader').textContent,
+					fragmentShader: document.getElementById('myFragmentShader').textContent
+				});
+				var geometry = new THREE.TorusKnotGeometry( 10, 3, 100, 16 );
+				var torusKnot = new THREE.Mesh( geometry, meshMaterial );
+				scene.add( torusKnot );
+
+				scene0 = new THREE.Scene();
+				//
+				// a warning triggers this fix
+				// "don't use render targets as textures. Use their .texture property instead."
+				//
+				// var plane = new THREE.Mesh (new THREE.PlaneGeometry(50,50), new THREE.MeshBasicMaterial({map:depthRenderTarget}));
+				var plane = new THREE.Mesh (
+						new THREE.PlaneGeometry(50,50), 
+						new THREE.MeshBasicMaterial({map:depthRenderTarget.texture})
+					);
+				//,color:0xff0000
+				scene0.add (plane);
+
+				window.addEventListener('resize', onWindowResize, false);
+
+			}
+
+			function onWindowResize() {
+
+				var width = window.innerWidth;
+				var height = window.innerHeight;
+
+				camera.aspect = width / height;
+				camera.updateProjectionMatrix();
+				renderer.setSize(width, height);
+
+				var pixelRatio = renderer.getPixelRatio();
+				var newWidth = Math.floor(width / pixelRatio) || 1;
+				var newHeight = Math.floor(height / pixelRatio) || 1;
+				depthRenderTarget.setSize(newWidth, newHeight);
+
+			}
+
+			function animate() {
+
+				controls.update();
+				requestAnimationFrame(animate);
+
+				renderer.render(scene, camera, depthRenderTarget, true);
+				renderer.render (scene0, camera);
+			}
+
+
+		</script>
+
+</body>
+</html>
