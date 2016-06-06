@@ -75,8 +75,8 @@
 			vec4 color2 = texture2D (texture2, vUv);
 			//vec4 color3 = texture2D (texture3, vUv);
 			//c = color.rgb * 0.5 + color2.rgb * color2.a * (1.0 - 0.5);  // blending equation
-			c = color.rgb;  // blending equation
-			//c = color2.rgb + color.rgb;  // blending equation
+			//c = color.rgb;  // blending equation
+			c = color2.rgb + color.rgb;  // blending equation
 			vec3 hsv = rgb2hsv (c);
 			if(i == 1){
 				//originalz_Hsv_s = hsv.y;
@@ -140,6 +140,8 @@
 		  // Define render logic ...
 		};
 		var setClearColor = 1;
+		rock = new THREE.Object3D();
+		sword = new THREE.Object3D();
 		//////////////////////////////////////////////
 			THREE.ImageUtils.crossOrigin = '';
 			var photo = name;
@@ -204,18 +206,9 @@
 			
 			putGUI();
 			//putBK();
-			var jsonLoader = new THREE.JSONLoader();
-			var url = "simple-rock.json";
-			jsonLoader.load(url, function(geometry, materials) {
-				//var material = new THREE.MeshFaceMaterial(materials);
-				jsonModel = new THREE.Mesh(geometry, materials);
-				jsonModel.scale.set(100, 100, 100);
-				jsonModel.castShadow = true;
-				jsonModel.receiveShadow = true; // self shadow	
-				scene.add(jsonModel);
-
-			});
+			
 		}
+		
 		function getMap(name){
 			THREE.ImageUtils.crossOrigin = '';
 			var photo = name;
@@ -297,8 +290,9 @@
 			quadMap.material = getMap('sky.jpg');
 			//sceneRTT.add (quadMap);
 
-			putLight();
+			
 			putBlock();
+			putLight();
 		}
 		function putLight(){
 			sceneMono = new THREE.Scene();	
@@ -310,7 +304,54 @@
 				new THREE.MeshLambertMaterial({color:0xffffff}));
 			torus.scale.set (10,10,10);
 			torus.rotation.x = Math.PI/2;
-			sceneMono.add (torus);
+			//sceneMono.add (torus);
+			
+			loadObj('rock.json',rock);
+			rock.position.y-=150;
+        	rock.scale.x=rock.scale.z=250;
+        	rock.scale.y=70;
+        	sceneMono.add(rock);
+
+			loadObj('sword.json',sword);
+			sword.scale.set(10,10,10);
+			sword.position.y += 50;
+			sword.rotation.x=Math.PI;
+			sceneColor.add(sword);
+		}
+		function loadObj(name,obj){
+			//////////////////
+			//obj.add(objectO);
+			
+			loader = new THREE.ObjectLoader();
+			//
+            loader.load( name, function ( object ) {
+            	//object.material = rttmaterial;
+            	
+        		obj.add(object.clone());        		
+            } );
+			////////////////////
+			/*
+			var jsonLoader = new THREE.JSONLoader();
+			var url = 'simple-rock.json';
+			jsonLoader.load(url, function(geometry, materials) {
+				//var material = new THREE.MeshFaceMaterial(materials);
+				jsonModel = new THREE.Mesh(geometry, materials);
+				jsonModel.scale.set(10, 10, 10);
+				jsonModel.castShadow = true;
+				jsonModel.receiveShadow = true; // self shadow	
+				scene.add(jsonModel);
+				//    jsonModel.position.set(70, 0, 0);
+
+				jsonModel2 = jsonModel.clone();
+				jsonModel.material = new THREE.MeshLambertMaterial();
+				jsonModel2.position.set(70, 0, 0);
+				jsonModel2.castShadow = true;
+				jsonModel2.receiveShadow = true; // self shadow
+				//spotLightGroup.add(jsonModel2);
+				scene.add(jsonModel2);
+
+			});
+			*/
 		}
 		function putBlock(){
 			sceneColor = new THREE.Scene();
@@ -321,7 +362,7 @@
 			var pointLight2 = new THREE.PointLight (0xffffff, 1.0);
 			pointLight2.position.set (0,200,500);
 			sceneColor.add (pointLight2);
-			sceneColor.add (column);
+			//sceneColor.add (column);
 		}
 		window.onresize = function () {
 			camera.aspect = window.innerWidth / window.innerHeight;
@@ -338,12 +379,17 @@
 
 			
 			torus.material.colorWrite = true;
+			if(typeof(rock.children[0])!="undefined")
+				rock.children[0].children[0].material.colorWrite = true;
 			renderer.render (sceneMono, camera, rtTexture, true);
 			if(setClearColor)
 			renderer.setClearColor (0x888800);
 			renderer.render (scene, camera2);
 
 			torus.material.colorWrite = false;
+			if(typeof(rock.children[0])!="undefined")
+				rock.children[0].children[0].material.colorWrite = false;
+			//obj.material.colorWrite = false;
 			renderer.render (sceneMono, camera);  
 			renderer.render (sceneColor, camera);
 		}
