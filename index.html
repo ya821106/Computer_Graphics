@@ -129,6 +129,9 @@
 		$("#DIV_HW_GIF").hide();
 	}
 	var show = function(i){
+		if(i==7){
+			window.open("http://ya821106.github.io/Computer_Graphics/HW7");
+		}
 		$("#DIV_HW"+i).find("iframe").contents().find("div[id='moveFocuseOuter']").focus();
 		$("#DIV_HW"+i).show();
 		$($("#DIV_HW"+i).find("iframe")).width("99%");
