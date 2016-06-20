@@ -1,0 +1,370 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+	<title>計算機圖學</title>
+	<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+	<script src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+
+	<style type="text/css">
+		body {
+			background-color: #fff;
+			color: #111;
+			margin: 0px;
+			overflow: hidden;
+			font-family: Monospace;
+			font-size: 10px;
+			position: absolute;
+		}
+		#info {
+			position: absolute;
+			top: 3%;
+			width: 100%;
+			padding: 5px;
+			text-align: center;
+			color: #ffff00
+		}
+	</style>
+</head>
+<body> 
+	<div id="info">
+		GLSL Normal Map
+	</div>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
+	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
+
+	<script type="x-shader/x-vertex" id="vertexShader">
+		uniform vec3 lightpos;
+
+		attribute vec4 tangent;
+		varying vec2 vUv;
+		varying vec3 vTangent;
+		varying vec3 vBinormal;
+		varying vec3 vNormal;
+		varying vec3 vLL;
+
+		void main() {
+			vec4 vWorldpos = modelMatrix * vec4( position, 1.0 ) ;
+			vec2 myrepeat = vec2 (12.0, 1.0);
+			vUv = myrepeat*uv;
+
+			gl_Position = projectionMatrix * modelViewMatrix * vec4( position, 1.0 );
+
+			vNormal = normalize( normalMatrix * normal );
+			vTangent = normalize( normalMatrix * tangent.xyz );
+			vBinormal = normalize( cross( vNormal, vTangent ) * tangent.w );
+
+			vLL = normalize (normalMatrix * (lightpos - vWorldpos.xyz));
+		}
+
+	</script>
+
+	<script type="x-shader/x-vertex" id="fragmentShader">
+
+		uniform sampler2D tNormal;
+		varying vec2 vUv;
+		varying vec3 vTangent;
+		varying vec3 vBinormal;
+		varying vec3 vNormal;
+		varying vec3 vLL;
+
+		void main() {
+
+			vec3 normalTex = texture2D (tNormal, vUv).xyz * 2.0 - 1.0;
+			normalTex.xy *= 6.0;
+			normalTex.y *= -1.; 
+			normalTex = normalize( normalTex );
+
+			mat3 tsb = mat3( normalize( vTangent ), normalize( vBinormal ), normalize( vNormal ) );
+			vec3 finalNormal = tsb * normalTex;
+			float ndotl = dot (normalize (vLL), normalize (finalNormal));
+			gl_FragColor = vec4( ndotl, ndotl, ndotl, 1. );
+
+		}
+
+	</script>
+	<script id="myVertexShader" type="x-shader/x-vertex">
+	  varying vec2 vUv; 
+	  void main() { 
+	  	gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0); 
+	  	vUv = uv; 
+	  }
+	</script>
+	<script id="myFragmentShader" type="x-shader/x-fragment">
+	  uniform sampler2D texture; 
+	  uniform int filter_type; 
+	  uniform int imageSize;
+	  varying vec2 vUv; 
+	  float step_w = 1.0/float(imageSize); 
+	  float step_h = 1.0/float(imageSize); 
+	  //http://stackoverflow.com/questions/15262729/const-float-array-in-webgl-shader 
+	  void main() { 
+	  float kernel[9];
+	  float kernel2[9]; 
+	  float kernel3[9]; 
+	  if (filter_type == 1) { // Mean 
+	  	kernel[0] = kernel[2] = kernel[6] = kernel[8] = 1.0/9.0; 
+	    kernel[1] = kernel[3] = kernel[5] = kernel[7] = 1.0/9.0; 
+	    kernel[4] = 1.0/9.0; } 
+	  else if (filter_type == 2) { // Gaussian 
+	    kernel[0] = kernel[2] = kernel[6] = kernel[8] = 1.0/16.0;
+	    kernel[1] = kernel[3] = kernel[5] = kernel[7] = 2.0/16.0; 
+	    kernel[4] = 4.0/16.0; } 
+	  else if (filter_type == 3) { // Laplacian 
+	    kernel[0] = kernel[2] = kernel[6] = kernel[8] = 0.0/1.0; 
+	    kernel[1] = kernel[3] = kernel[5] = kernel[7] = 1.0/1.0; 
+	    kernel[4] = -4.0/1.0; } 
+	  else if (filter_type == 4) { // emboss 
+	    for (int i = 0; i < 9; i++) kernel[i]=0.0; 
+	    	kernel[0]=2.0, kernel[4]= kernel[8]= -1.0; 
+	  } 
+	  else if (filter_type==5 ) { // sharpness 
+	    for (int i=0 ; i < 9; i++) kernel[i]= -1.0; kernel[4]=9.0; 
+	  }
+	  else if (filter_type == 6) { // sobel 
+	  	//https://zh.wikipedia.org/wiki/%E7%B4%A2%E8%B2%9D%E7%88%BE%E7%AE%97%E5%AD%90
+	  	kernel[0] = -1.0;
+	  	kernel[1] =  0.0;
+	  	kernel[2] =  1.0;
+	  	kernel[3] = -2.0; 
+	    kernel[4] =  0.0;
+	    kernel[5] =  2.0;
+	    kernel[6] = -1.0;
+	    kernel[7] =  0.0; 
+	    kernel[8] =  1.0;
+
+	    kernel2[0] = -1.0;
+	  	kernel2[1] = -2.0;
+	  	kernel2[2] = -1.0;
+	  	kernel2[3] =  0.0; 
+	    kernel2[4] =  0.0;
+	    kernel2[5] =  0.0;
+	    kernel2[6] =  1.0;
+	    kernel2[7] =  2.0; 
+	    kernel2[8] =  1.0;
+	  } 
+	  if(filter_type == 6){
+	  	vec2 offset[9]; 
+	    offset[0]=vec2(-step_w, -step_h); 
+	    offset[1]=vec2(0.0, -step_h); offset[2]= vec2(step_w, -step_h), 
+	    offset[3]=vec2(-step_w, 0.0), offset[4]=vec2(0.0, 0.0), offset[5]=vec2(step_w, 0.0), 
+	    offset[6]=vec2(-step_w, step_h), offset[7]=vec2(0.0, step_h), offset[8]=vec2(step_w, step_h); 
+	    vec3 sum= vec3(0.0); 
+	    vec3 sum2= vec3(0.0); 
+	    //if (vUv.s < 0.49) { 
+	  	  for (int i=0 ; i < 9; i++) { 
+	    	vec3 tmp=texture2D (texture, vUv+offset[i]).rgb; 
+	        //sum += tmp * (sqrt(pow(kernel[i],2.0) + pow(kernel2[i],2.0)));
+	        //sum+=tmp*kernel[i]; 
+	        //sum+=tmp*kernel3[i];
+	        sum+= tmp*kernel[i]; 
+	        sum2+= tmp*kernel2[i]; 
+	      } 
+	      vec3 outTmp = cross(vec3 (1.0, 0.0, sum),vec3 (0.0, 1.0, sum2));
+		  outTmp = (outTmp/sqrt(pow(outTmp.x,2.0)+pow(outTmp.y,2.0)+pow(outTmp.z,2.0)));
+		  //vec3 outTmp = cross(vec3 (1.0, 0.0, (sum.r+sum.g+sum.b)/3.0),vec3 (0.0, 1.0, (sum2.r+sum2.g+sum2.b)/3.0));
+		  //outTmp = (outTmp/length(outTmp)) ;//sqrt(pow(outTmp.r,2.0)+pow(outTmp.g,2.0)pow(outTmp.b,2.0)));
+		  
+		  sum = outTmp;
+		  sum = (sum +1.0)/2.0;
+	    //} 
+	    
+	    gl_FragColor = vec4 (sum, 1.0); 
+	  }
+	  
+	  
+	  }
+	</script>
+	<script id="myVertexShader-rtt" type="x-shader/x-vertex">
+		varying vec2 vUv;
+		void main() {
+			gl_Position = projectionMatrix* modelViewMatrix * vec4( position, 1.0);
+			vUv = uv;
+		}
+	</script>
+	<script id="myFragmentShader-rtt" type="x-shader/x-fragment">
+		uniform sampler2D texture;
+		varying vec2 vUv;
+		
+		void main() {
+			gl_FragColor = vec4 (.2,.2,.2,0.) +texture2D (texture, vUv);
+		}
+	</script>
+
+	<<script>
+	var scene, renderer, camera;
+	var controls;
+	var light, angle = 0, lightmodel;
+	var shaderMaterial;
+	var model2;
+	var width = window.innerWidth;
+	var height = window.innerHeight;
+	var rtTexture = new THREE.WebGLRenderTarget( 
+		   	1024,1024,//256,256,  // size of the FBO
+				{ minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat } 
+				);
+	var rock = new THREE.Object3D();
+	var rttmaterial;
+	init();
+	animate();
+
+	function init() {
+		renderer = new THREE.WebGLRenderer({
+			antialias: true
+		});
+		renderer.setSize(width, height);
+		renderer.setClearColor(0x888888);
+		document.body.appendChild(renderer.domElement);
+
+		scene = new THREE.Scene();
+
+		camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 10000);
+		camera.position.z = 200;
+		camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+		controls = new THREE.OrbitControls(camera, renderer.domElement);
+
+		light = new THREE.PointLight ();
+		light.position.set (0,0,300);
+		scene.add (light);
+
+		lightmodel = new THREE.Mesh(new THREE.SphereGeometry(3, 16, 16), new THREE.MeshBasicMaterial({
+			color: 0xffff00
+		}));
+		scene.add(lightmodel);
+
+		var gridXZ = new THREE.GridHelper(100, 10);
+		gridXZ.setColors(new THREE.Color(0xff0000), new THREE.Color(0xffffff));
+		scene.add(gridXZ);
+
+
+
+		THREE.ImageUtils.crossOrigin = '';
+		shaderMaterial = new THREE.ShaderMaterial( {
+
+			uniforms: { 
+				lightpos: {type: 'v3', value: new THREE.Vector3(200,100,0)},//rtTexture
+				tNormal: { type: 't', value:  rtTexture},
+				//THREE.ImageUtils.loadTexture( 'https://i.imgur.com/vQzLZQZ.jpg' )
+			},
+			vertexShader: document.getElementById( 'vertexShader' ).textContent,
+			fragmentShader: document.getElementById( 'fragmentShader' ).textContent,
+			shading: THREE.SmoothShading
+
+		} );
+		shaderMaterial.uniforms.tNormal.value.wrapS = shaderMaterial.uniforms.tNormal.value.wrapT = 
+		THREE.RepeatWrapping;
+
+		var geometry = new THREE.BoxGeometry( 20, 20, 20 );;//new THREE.TorusKnotGeometry (20,6,200,200);
+
+		geometry.computeTangents();
+		model2 = new THREE.Mesh (geometry, shaderMaterial);
+		//model2.position.z = -50;
+		scene.add(model2);
+		doo ();
+	}
+	function loadObj(name,obj){
+			//////////////////
+			//obj.add(objectO);
+			
+			loader = new THREE.ObjectLoader();
+			//
+            loader.load( name, function ( object ) {
+            	//object.material = rttmaterial;
+            	
+        		obj.add(object.clone());        		
+            } );
+		}
+	function doo () {
+		var vertShader = document.getElementById('myVertexShader').innerHTML;
+		var fragShader = document.getElementById('myFragmentShader').innerHTML;
+		  THREE.ImageUtils.crossOrigin = '';
+		  tex1 = THREE.ImageUtils.loadTexture('https://i.imgur.com/A7iqfXD.png'); // olympic-c:256x256
+		  tex2 = THREE.ImageUtils.loadTexture('https://i.imgur.com/2Pafhx9.jpg'); // lena:512x512
+		filter_type = 6;
+		var uniforms = {
+		    filter_type: {
+		      type: 'i',
+		      value: filter_type
+		    },
+		    imageSize: {
+		    	type: 'i',
+		      value: 256
+		    },
+		    texture: {
+		      type: 't',
+		      value: tex1
+		    } ,
+		  };
+		material_shh = new THREE.ShaderMaterial({
+		    uniforms: uniforms,
+		    vertexShader: vertShader,
+		    fragmentShader: fragShader
+		  });
+		material_shh.side = THREE.DoubleSide;
+
+		
+		loadObj('rock.json',rock);
+		//rock.position.y-=150;
+    	rock.scale.x=rock.scale.z=50;
+    	rock.scale.y=35;
+    	rock.position.z=-50;
+    	scene.add(rock);
+        //rock.children[0].children[0].material = material_shh;
+        scene.add(rock);
+        //rock.children[0].children[0].material = rttmaterial;
+		var geometry = new THREE.PlaneGeometry(100,100);
+		var bs = new THREE.Mesh(geometry, material_shh);
+
+		scene2 = new THREE.Scene();
+		camera2 = new THREE.OrthographicCamera(-50, 50, 50, -50, -10, 10);
+		scene2.add(bs);
+		//////////////////////////////////////////////////////////////////////
+		  
+
+		  rttmaterial = new THREE.ShaderMaterial({
+		    uniforms: {
+		      texture: {
+		        type: "t",
+		        value: rtTexture
+		      },
+		    },
+		    vertexShader: document.getElementById('myVertexShader-rtt').textContent,
+		    fragmentShader: document.getElementById('myFragmentShader-rtt').textContent
+		  });
+		  var bs0 = new THREE.Mesh(geometry, rttmaterial);
+		  //////////////
+		  //scene.add(bs0);
+		  //////////////
+		  bs0.position.y = 50;
+		  rttmaterial.side = THREE.DoubleSide;
+		  ////////
+		  
+	}
+	function animate() {
+		angle += 0.005;
+		requestAnimationFrame(animate);
+		controls.update();
+
+		model2.position.set (10,0,-20);
+		model2.rotation.z = angle/5;
+
+		light.position.set (80*Math.cos(angle), 20, 80*Math.sin(angle));
+		lightmodel.position.copy(light.position);
+		shaderMaterial.uniforms.lightpos.value.copy (light.position);
+
+		if(typeof(rock.children[0])!="undefined")
+			  rock.children[0].children[0].material = rttmaterial;
+		///////////
+		renderer.clear(true);
+		var thisImageSize = 256;//(fileChoice == 0) ? 256 : 512;
+		renderer.setViewport(20, 20, thisImageSize,thisImageSize);
+		//renderer.render(scene2, camera2);
+		renderer.render (scene2, camera2, rtTexture, true);
+		renderer.setViewport(0, 0, width, height);
+		renderer.render(scene, camera);
+	}
+
+</script>
+
+</body>
+</html>
