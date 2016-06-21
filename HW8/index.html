@@ -203,6 +203,7 @@
 				{ minFilter: THREE.LinearFilter, magFilter: THREE.NearestFilter, format: THREE.RGBFormat } 
 				);
 	var rock = new THREE.Object3D();
+	var ship = new THREE.Object3D();
 	var rttmaterial;
 	var mesh;
 	var clock = new THREE.Clock();
@@ -350,9 +351,12 @@
     	rock.scale.y=35;
     	rock.position.z=-50;
     	scene.add(rock);
-        //rock.children[0].children[0].material = material_shh;
-        scene.add(rock);
-        //rock.children[0].children[0].material = rttmaterial;
+    	loadObj('ship.json',ship);
+    	ship.scale.set(10,10,10);
+    	ship.position.y=-5;
+    	scene.add(ship);
+
+
 		var geometry = new THREE.PlaneGeometry(100,100);
 		var bs = new THREE.Mesh(geometry, material_shh);
 
