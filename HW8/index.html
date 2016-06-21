@@ -31,7 +31,7 @@
 	</div>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r70/three.min.js"></script>
 	<script src="https://dl.dropboxusercontent.com/u/3587259/Code/Threejs/OrbitControls.js"></script>
-
+	<script  src="https://rawgit.com/banksean/304522/raw/8f481c980fe34e6930d44c61c59d7851f4235a3c/perlin-noise-simplex.js"></script>
 	<script type="x-shader/x-vertex" id="vertexShader">
 		uniform vec3 lightpos;
 
@@ -204,6 +204,9 @@
 				);
 	var rock = new THREE.Object3D();
 	var rttmaterial;
+	var mesh;
+	var clock = new THREE.Clock();
+	var snoise = new SimplexNoise();
 	init();
 	animate();
 
@@ -234,7 +237,7 @@
 
 		var gridXZ = new THREE.GridHelper(100, 10);
 		gridXZ.setColors(new THREE.Color(0xff0000), new THREE.Color(0xffffff));
-		scene.add(gridXZ);
+		//scene.add(gridXZ);
 
 
 
@@ -261,6 +264,44 @@
 		//model2.position.z = -50;
 		scene.add(model2);
 		doo ();
+		putSea();
+	}
+	function putSea () {
+		var meshFunc = function(u0, v0) {
+			return new THREE.Vector3(-100 + 200 * u0, 
+			//3 * Math.sin(20 * (u0 + v0)), 
+			snoise.noise(u0*3,v0*3)*10,-100 + 200 * v0);
+		};
+		var geometry = new THREE.ParametricGeometry(meshFunc, 40, 40);
+		// these two are not required:
+		// already done so in constructor
+			// geometry.computeFaceNormals();
+			// geometry.computeVertexNormals();
+		//https://github.com/mrdoob/three.js/blob/master/src/extras/geometries/ParametricGeometry.js#L79-L80
+
+		var material = new THREE.MeshPhongMaterial({
+		color: 0x2894FF,
+		wireframe: false,
+		side: THREE.DoubleSide,
+		});
+
+		mesh = new THREE.Mesh(geometry, material);
+		scene.add(mesh);
+	}
+	function putSeaAni () {
+		var time = clock.getElapsedTime();
+
+		var nvs = mesh.geometry.vertices.length;
+		for (var i = 0; i < nvs; i++) {
+		var u0 = (mesh.geometry.vertices[i].x + 100)/200;
+		var v0 = (mesh.geometry.vertices[i].z + 100)/200;
+		mesh.geometry.vertices[i].y = snoise.noise3d(u0*3,v0*3, time)*10;
+		}
+
+		mesh.geometry.computeFaceNormals();
+		mesh.geometry.computeVertexNormals();
+		mesh.geometry.normalsNeedUpdate = true;
+		mesh.geometry.verticesNeedUpdate = true;
 	}
 	function loadObj(name,obj){
 			//////////////////
@@ -362,6 +403,7 @@
 		renderer.render (scene2, camera2, rtTexture, true);
 		renderer.setViewport(0, 0, width, height);
 		renderer.render(scene, camera);
+		putSeaAni ();
 	}
 
 </script>
